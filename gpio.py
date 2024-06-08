@@ -6,8 +6,8 @@ app = Flask(__name__)
 GPIO.setmode(GPIO.BCM) 
 
 pins = {
-    17: {'name': 'Pin 17', 'state': GPIO.LOW},
-    18: {'name': 'Pin 18', 'state': GPIO.LOW}
+    2: {'name': 'Pin 2', 'state': GPIO.LOW},
+    3: {'name': 'Pin 3', 'state': GPIO.LOW}
 }
 
 for pin in pins:
