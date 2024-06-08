@@ -31,6 +31,8 @@ def flash_pin(pin, interval, duration):
         time.sleep(interval)
     GPIO.output(pin, GPIO.LOW)  # Ensure pin is off after flashing
 
+flash_pin(2, 0.5, 10)
+
 @app.route('/gpio/<int:pin>/on', methods=['POST'])
 def turn_on(pin):
     if pin in pins:
@@ -107,7 +109,7 @@ def flash(pin):
     thread.do_run = True
     thread.start()
     flashing_threads[pin] = thread
-    return     jsonify({f'{pin}': 'flashing', 'interval': str(interval), 'duration': str(duration)})
+    return  jsonify({f'{pin}': 'flashing', 'interval': str(interval), 'duration': str(duration)})
 
 @app.route('/gpio/<int:pin>/stop_flash', methods=['POST'])
 def stop_flash(pin):
