@@ -31,8 +31,6 @@ def flash_pin(pin, interval, duration):
         time.sleep(interval)
     GPIO.output(pin, GPIO.LOW)  # Ensure pin is off after flashing
 
-flash_pin(2, 0.5, 10)
-
 @app.route('/gpio/<int:pin>/on', methods=['POST'])
 def turn_on(pin):
     if pin in pins:
