@@ -5,13 +5,21 @@ import time
 
 app = Flask(__name__)
 
-GPIO.setmode(GPIO.BCM) 
+# Set the GPIO mode
+GPIO.setmode(GPIO.BCM)  # You can also use GPIO.BOARD
 
+# A dictionary to store the pin statuses
 pins = {
     2: {'name': 'Pin 2', 'state': GPIO.LOW},
     3: {'name': 'Pin 3', 'state': GPIO.LOW}
 }
 
+# Setup the pins as output and set initial state
+for pin in pins:
+    GPIO.setup(pin, GPIO.OUT)
+    GPIO.output(pin, pins[pin]['state'])
+
+# Store the flashing threads to stop them if needed
 flashing_threads = {}
 
 def flash_pin(pin, interval, duration):
@@ -21,16 +29,13 @@ def flash_pin(pin, interval, duration):
         time.sleep(interval)
         GPIO.output(pin, GPIO.LOW)
         time.sleep(interval)
-    GPIO.output(pin, GPIO.LOW)
-
-
-for pin in pins:
-    GPIO.setup(pin, GPIO.OUT)
-    GPIO.output(pin, pins[pin]['state'])
+    GPIO.output(pin, GPIO.LOW)  # Ensure pin is off after flashing
 
 @app.route('/gpio/<int:pin>/on', methods=['POST'])
 def turn_on(pin):
     if pin in pins:
+        if pin in flashing_threads:
+            return jsonify({'error': f'Pin {pin} is flashing. Stop flashing before turning on.'}), 400
         GPIO.output(pin, GPIO.HIGH)
         pins[pin]['state'] = GPIO.HIGH
         return jsonify({pin: 'on'})
@@ -39,6 +44,8 @@ def turn_on(pin):
 @app.route('/gpio/<int:pin>/off', methods=['POST'])
 def turn_off(pin):
     if pin in pins:
+        if pin in flashing_threads:
+            return jsonify({'error': f'Pin {pin} is flashing. Stop flashing before turning off.'}), 400
         GPIO.output(pin, GPIO.LOW)
         pins[pin]['state'] = GPIO.LOW
         return jsonify({pin: 'off'})
@@ -68,6 +75,10 @@ def cleanup_pin(pin):
     if pin in pins:
         GPIO.cleanup(pin)
         del pins[pin]
+        if pin in flashing_threads:
+            flashing_threads[pin].do_run = False
+            flashing_threads[pin].join()
+            del flashing_threads[pin]
         return jsonify({pin: 'cleanup'})
     return jsonify({'error': 'Invalid pin'}), 400
 
@@ -77,8 +88,14 @@ def flash(pin):
         return jsonify({'error': 'Invalid pin'}), 400
 
     data = request.json
-    interval = data.get('interval', 1.0) 
-    duration = data.get('duration', 10.0) 
+    try:
+        interval = float(data.get('interval', 1.0))
+        duration = float(data.get('duration', 10.0))
+    except (ValueError, TypeError):
+        return jsonify({'error': 'Invalid interval or duration'}), 400
+
+    if interval <= 0 or duration <= 0:
+        return jsonify({'error': 'Interval and duration must be positive'}), 400
 
     if pin in flashing_threads:
         flashing_threads[pin].do_run = False
