@@ -94,8 +94,8 @@ def flash(pin):
     except (ValueError, TypeError):
         return jsonify({'error': 'Invalid interval or duration'}), 400
 
-    if interval <= 0 or duration <= 0:
-        return jsonify({'error': 'Interval and duration must be positive'}), 400
+    # if interval <= 0 or duration <= 0:
+    #     return jsonify({'error': 'Interval and duration must be positive'}), 400
 
     if pin in flashing_threads:
         flashing_threads[pin].do_run = False
