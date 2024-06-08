@@ -101,12 +101,12 @@ def flash(pin):
         flashing_threads[pin].do_run = False
         flashing_threads[pin].join()
 
+    jsonify({f'{pin}': 'flashing', 'interval': str(interval), 'duration': str(duration)})
+
     thread = threading.Thread(target=flash_pin, args=(pin, interval, duration))
     thread.do_run = True
     thread.start()
     flashing_threads[pin] = thread
-
-    return jsonify({f'{pin}': 'flashing', 'interval': str(interval), 'duration': str(duration)})
 
 @app.route('/gpio/<int:pin>/stop_flash', methods=['POST'])
 def stop_flash(pin):
