@@ -24,7 +24,7 @@ flashing_threads = {}
 
 def flash_pin(pin, interval, duration):
     start_time = time.time()
-    while time.time() - start_time < int(duration):
+    while int(time.time() - start_time) < int(duration):
         GPIO.output(pin, GPIO.HIGH)
         time.sleep(interval)
         GPIO.output(pin, GPIO.LOW)
