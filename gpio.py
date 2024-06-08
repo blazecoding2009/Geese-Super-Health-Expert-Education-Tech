@@ -10,6 +10,18 @@ pins = {
     3: {'name': 'Pin 3', 'state': GPIO.LOW}
 }
 
+flashing_threads = {}
+
+def flash_pin(pin, interval, duration):
+    start_time = time.time()
+    while time.time() - start_time < duration:
+        GPIO.output(pin, GPIO.HIGH)
+        time.sleep(interval)
+        GPIO.output(pin, GPIO.LOW)
+        time.sleep(interval)
+    GPIO.output(pin, GPIO.LOW)
+
+
 for pin in pins:
     GPIO.setup(pin, GPIO.OUT)
     GPIO.output(pin, pins[pin]['state'])
@@ -56,6 +68,37 @@ def cleanup_pin(pin):
         del pins[pin]
         return jsonify({pin: 'cleanup'})
     return jsonify({'error': 'Invalid pin'}), 400
+
+@app.route('/gpio/<int:pin>/flash', methods=['POST'])
+def flash(pin):
+    if pin not in pins:
+        return jsonify({'error': 'Invalid pin'}), 400
+
+    data = request.json
+    interval = data.get('interval', 1.0) 
+    duration = data.get('duration', 10.0) 
+
+    if pin in flashing_threads:
+        flashing_threads[pin].do_run = False
+        flashing_threads[pin].join()
+
+    thread = threading.Thread(target=flash_pin, args=(pin, interval, duration))
+    thread.do_run = True
+    thread.start()
+    flashing_threads[pin] = thread
+
+    return jsonify({pin: 'flashing', 'interval': interval, 'duration': duration})
+
+@app.route('/gpio/<int:pin>/stop_flash', methods=['POST'])
+def stop_flash(pin):
+    if pin in flashing_threads:
+        flashing_threads[pin].do_run = False
+        flashing_threads[pin].join()
+        del flashing_threads[pin]
+        GPIO.output(pin, GPIO.LOW)
+        pins[pin]['state'] = GPIO.LOW
+        return jsonify({pin: 'flash stopped'})
+    return jsonify({'error': 'No flashing thread for pin'}), 400
 
 if __name__ == '__main__':
     try:
