@@ -16,7 +16,7 @@ prev_alert = time.time()
 
 def alert():
     requests.post(
-        "http://192.168.137.201:5000/gpio/2/flash",
+        "http://192.168.137.201:5000/gpio/3/flash",
         json={"interval": 0.1, "duration": 1},
     )
 
@@ -37,7 +37,7 @@ def alert_sink(predictions: dict, video_frame: VideoFrame):
 # initialize a pipeline object
 pipeline = InferencePipeline.init(
     model_id="geese-sheet/8",  # Roboflow model to use
-    video_reference=0,  # Path to video, device id (int, usually 0 for built in webcams), or RTSP stream url
+    video_reference=3,  # Path to video, device id (int, usually 0 for built in webcams), or RTSP stream url
     on_prediction=partial(
         multi_sink, sinks=[alert_sink, render_boxes]
     ),  # Function to run after each prediction
