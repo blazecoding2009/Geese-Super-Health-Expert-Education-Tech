@@ -1,3 +1,4 @@
+import math
 from inference import InferencePipeline
 from functools import partial
 
@@ -31,12 +32,17 @@ import time
 
 prev_alert = time.time()
 prev_detection = []
+prev_scores = []
 
 RPI_BASE_URL = "http://192.168.137.201:5000"
-MIN_TIME_BETWEEN_ALERTS = 3
-MIN_FRAMES_TO_ALERT = 3
-DETECTION_CONFIDENCE = 0.4
+MIN_TIME_BETWEEN_ALERTS = 2
+ROLLING_WINDOW = 5
+AVG_THRESHOLD = 10
+DETECTION_CONFIDENCE = 0.3
 VIDEO_DEVICE_INDEX = 3
+
+IDEAL_WIDTH = 15
+IDEAL_HEIGHT = 15
 
 
 def alert_buzzer():
@@ -54,22 +60,39 @@ def alert_led():
 
 
 def alert_sink(predictions: dict, video_frame: VideoFrame):
-    global prev_alert, prev_detection
-    logger.debug(prev_detection)
+    global prev_alert, prev_detection, prev_scores
     if len(predictions["predictions"]) > 0:
+        score = 0
+
+        for prediction in predictions["predictions"]:
+            dWidth = abs(IDEAL_WIDTH - prediction["width"])
+            score += 10 - dWidth * prediction["confidence"]
+            dHeight = abs(IDEAL_HEIGHT - prediction["height"])
+            score += 10 - dHeight * prediction["confidence"]
+
+        prev_scores.append(score)
+        while len(prev_scores) > ROLLING_WINDOW:
+            prev_scores.pop(0)
+
+        logger.info(score)
+        logger.debug(prev_scores)
+        logger.debug(prediction)
+
         if not (
             video_frame.frame_id - 1 in prev_detection
             or video_frame.frame_id - 2 in prev_detection
         ):
             prev_detection = []
+            prev_scores = []
         prev_detection.append(video_frame.frame_id)
         if (
             time.time() - prev_alert > MIN_TIME_BETWEEN_ALERTS
-            and len(prev_detection) > MIN_FRAMES_TO_ALERT
+            and sum(prev_scores) > AVG_THRESHOLD * ROLLING_WINDOW
         ):
             Thread(target=alert_buzzer).start()
             Thread(target=alert_led).start()
             prev_alert = time.time()
+            logger.info("ALERT!")
 
 
 # initialize a pipeline object
